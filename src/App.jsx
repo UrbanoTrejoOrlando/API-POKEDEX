@@ -1,10 +1,9 @@
 import React from 'react'
-
+import ApokedexComponent from './Pokeapi/component'
 const App = () => {
   return (
-    <div>
-      <h1>Hola</h1>
-    </div>
+    <ApokedexComponent/>
+
   )
 }
 
