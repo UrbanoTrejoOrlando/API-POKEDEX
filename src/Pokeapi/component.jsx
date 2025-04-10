@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Mapeo de tipos a colores de fondo
+// Colores por tipo
 const typeColors = {
   fire: "bg-red-500",
   water: "bg-blue-500",
@@ -22,7 +22,7 @@ const typeColors = {
   normal: "bg-gray-300",
 };
 
-// Para barras: cambia el color según la cantidad
+// Colores de barra por stat
 const getBarColor = (value) => {
   if (value >= 100) return "bg-green-500";
   if (value >= 70) return "bg-yellow-400";
@@ -33,10 +33,12 @@ export default function ApokedexComponent() {
   const [pokemonList, setPokemonList] = useState([]);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchPokemons = async () => {
+  const fetchPokemons = async (isInitial = false) => {
     setLoading(true);
-    const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=20&offset=${offset}`);
+    const currentOffset = isInitial ? 0 : offset;
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=20&offset=${currentOffset}`);
     const data = await response.json();
 
     const details = await Promise.all(
@@ -46,21 +48,43 @@ export default function ApokedexComponent() {
       })
     );
 
-    setPokemonList((prevList) => [...prevList, ...details]);
-    setOffset((prevOffset) => prevOffset + 20);
+    if (isInitial) {
+      setPokemonList(details);
+      setOffset(20);
+    } else {
+      setPokemonList((prevList) => [...prevList, ...details]);
+      setOffset((prevOffset) => prevOffset + 20);
+    }
+
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchPokemons();
+    fetchPokemons(true); // Solo carga los primeros 20 al iniciar
   }, []);
+
+  const filteredPokemons = pokemonList.filter((pokemon) =>
+    pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <h1 className="text-4xl font-bold text-center text-gray-800 mb-10">Pokédex</h1>
+      <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">Pokédex</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
-        {pokemonList.map((pokemon) => {
+      {/* Buscador */}
+      <div className="flex justify-center mb-10">
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-sm px-4 py-2 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+
+      {/* Grid de 4 columnas */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+        {filteredPokemons.map((pokemon) => {
           const hp = pokemon.stats[0].base_stat;
           const attack = pokemon.stats[1].base_stat;
           const defense = pokemon.stats[2].base_stat;
@@ -94,30 +118,35 @@ export default function ApokedexComponent() {
 
               {/* Barras de stats */}
               <div className="w-full">
-                {[["HP", hp], ["ATK", attack], ["DEF", defense], ["SPA", specialAttack]].map(([label, value]) => (
-                  <div key={label} className="mb-1">
-                    <span className="text-xs font-medium text-gray-600">{label}: {value}</span>
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-2 ${getBarColor(value)} rounded-full`}
-                        style={{ width: `${Math.min(value, 100)}%` }}
-                      ></div>
+                {[["HP", hp], ["ATK", attack], ["DEF", defense], ["SPA", specialAttack]].map(
+                  ([label, value]) => (
+                    <div key={label} className="mb-1">
+                      <span className="text-xs font-medium text-gray-600">
+                        {label}: {value}
+                      </span>
+                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-2 ${getBarColor(value)} rounded-full`}
+                          style={{ width: `${Math.min(value, 100)}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
+      {/* Mostrar más */}
       <div className="flex justify-center">
         <button
-          onClick={fetchPokemons}
+          onClick={() => fetchPokemons(false)}
           disabled={loading}
-          className="bg-blue-500 text-white font-semibold px-6 py-3 rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50"
+          className="bg-green-500 text-white font-semibold px-6 py-3 rounded-full shadow hover:bg-green-600 transition disabled:opacity-50"
         >
-          {loading ? "Cargando..." : "Cargar más"}
+          {loading ? "Cargando..." : "Mostrar más Pokémon"}
         </button>
       </div>
     </div>
